@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI MathMentor – Pembantu Matematik Pintar</title>
+  <meta name="description" content="AI MathMentor: tutor Matematik pintar untuk pelajar Tingkatan 1-3 dengan petunjuk langkah demi langkah, pengesan kesilapan dan latihan adaptif.">
+  <link rel="icon" href="/static/img/owl.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app">
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="/static/img/owl.jpg" alt="Cikgu Owl">
+      <div><h1>AI MathMentor</h1><small data-i18n="tagline">Pembantu Matematik Pintar</small></div>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" data-view="home" id="nav-home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+        <span data-i18n="nav_home">Laman Utama</span></button>
+      <button class="nav-btn" data-view="chat" id="nav-chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z"/></svg>
+        <span data-i18n="nav_chat">Tutor Chat</span></button>
+      <button class="nav-btn" data-view="practice" id="nav-practice">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+        <span data-i18n="nav_practice">Latihan</span></button>
+      <button class="nav-btn" data-view="progress" id="nav-progress">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 20h18M6 16l4-5 4 3 5-7"/></svg>
+        <span data-i18n="nav_progress">Kemajuan</span></button>
+      <button class="nav-btn" data-view="settings" id="nav-settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 13.7H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10.3 3V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        <span data-i18n="nav_settings">Tetapan</span></button>
+    </nav>
+    <div class="side-foot">
+      <div class="status-pill" id="ai-status"><i class="dot"></i><span>Menyemak AI...</span></div>
+    </div>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <main class="main">
+    <header class="topbar">
+      <div><h2 id="page-title">Laman Utama</h2><p id="page-sub"></p></div>
+      <div class="top-actions">
+        <div class="seg" id="form-seg" title="Tingkatan">
+          <button data-form="1">T1</button><button data-form="2">T2</button><button data-form="3">T3</button>
+        </div>
+        <span class="chip" title="XP">⭐ <span id="xp-chip">0</span> XP</span>
+        <span class="chip" title="Streak">🔥 <span id="streak-chip">0</span></span>
+      </div>
+    </header>
+
+    <!-- HOME -->
+    <section class="view active" id="view-home">
+      <div class="hero">
+        <div>
+          <h2 id="hello">Hai!</h2>
+          <p data-i18n="hero_p">Saya Cikgu Owl. Jom belajar Matematik langkah demi langkah – saya bantu dengan petunjuk, bukan terus jawapan!</p>
+          <button class="btn" id="hero-start" data-i18n="hero_btn">🚀 Mula Belajar</button>
+        </div>
+        <img src="/static/img/owl.jpg" alt="Cikgu Owl mascot">
+      </div>
+      <div class="grid stats">
+        <div class="card stat"><div class="stat-ic">⭐</div><div><b id="st-xp">0</b><span>XP</span></div></div>
+        <div class="card stat"><div class="stat-ic">🔥</div><div><b id="st-streak">0</b><span data-i18n="days_streak">Hari berturut</span></div></div>
+        <div class="card stat"><div class="stat-ic">✅</div><div><b id="st-correct">0</b><span data-i18n="correct_ans">Jawapan betul</span></div></div>
+        <div class="card stat"><div class="stat-ic">🏆</div><div><b id="st-mastered">0</b><span data-i18n="mastered">Topik dikuasai</span></div></div>
+      </div>
+      <div class="grid quick">
+        <button class="card quick-card" data-go="chat" id="q-chat"><div class="qi">💬</div><h4 data-i18n="q1_t">Tanya Cikgu Owl</h4><p data-i18n="q1_p">Dapatkan petunjuk langkah demi langkah untuk soalan anda.</p></button>
+        <button class="card quick-card" data-go="check" id="q-check"><div class="qi">🔍</div><h4 data-i18n="q2_t">Semak Jalan Kerja</h4><p data-i18n="q2_p">Tampal jalan kerja anda, AI kesan kesilapan lazim.</p></button>
+        <button class="card quick-card" data-go="practice" id="q-practice"><div class="qi">🎯</div><h4 data-i18n="q3_t">Latihan Adaptif</h4><p data-i18n="q3_p">Soalan ikut tahap penguasaan anda.</p></button>
+      </div>
+      <div class="card" style="margin-top:22px">
+        <h3 data-i18n="recommend">🎯 Cadangan untuk anda</h3>
+        <div class="suggest-list" id="home-recs"></div>
+      </div>
+    </section>
+
+    <!-- CHAT -->
+    <section class="view" id="view-chat">
+      <div class="chat-layout">
+        <div class="card chat-card">
+          <div class="chat-head">
+            <img src="/static/img/owl.jpg" alt="">
+            <div><b>Cikgu Owl</b><small data-i18n="chat_sub">Tutor Matematik AI · Offline</small></div>
+            <div class="spacer"></div>
+            <button class="icon-btn" id="new-chat" data-i18n="new_chat">＋ Chat baru</button>
+          </div>
+          <div class="mode-bar">
+            <button class="mode-btn on" data-mode="tutor" id="mode-tutor" data-i18n="m_tutor">🧭 Tutor (Petunjuk)</button>
+            <button class="mode-btn" data-mode="check" id="mode-check" data-i18n="m_check">🔍 Semak Kesilapan</button>
+            <button class="mode-btn" data-mode="explain" id="mode-explain" data-i18n="m_explain">📖 Terangkan Konsep</button>
+          </div>
+          <div class="messages" id="messages"></div>
+          <div class="actions">
+            <button class="act a1" id="act-hint" data-i18n="a_hint">💡 Petunjuk seterusnya</button>
+            <button class="act a2" id="act-check" data-i18n="a_check">✅ Semak jawapan saya</button>
+            <button class="act a3" id="act-explain" data-i18n="a_explain">📖 Terangkan konsep</button>
+            <button class="act a4" id="act-show" data-i18n="a_show">👀 Tunjuk jawapan</button>
+          </div>
+          <div class="composer">
+            <textarea id="chat-input" rows="1" placeholder="Taip soalan anda... contoh: Selesaikan 3x - 4 = 11"></textarea>
+            <button class="send" id="send-btn" aria-label="Hantar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
+          </div>
+        </div>
+        <div class="side-panel">
+          <div class="card streak-card"><small data-i18n="streak_title">Rantaian Belajar</small><div class="big">🔥 <span id="chat-streak">0</span> <span data-i18n="days">Hari</span></div></div>
+          <div class="card"><h3 data-i18n="try_ask">💭 Cuba tanya</h3><div class="suggest-list" id="chat-suggest"></div></div>
+          <div class="card"><h3 data-i18n="topic_prog">📊 Kemajuan Topik</h3><div id="chat-rings"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRACTICE -->
+    <section class="view" id="view-practice">
+      <div class="practice-layout">
+        <div class="card"><h3 data-i18n="choose_topic">📚 Pilih Topik</h3><div class="topic-list" id="topic-list"></div></div>
+        <div class="card q-card">
+          <div class="q-meta"><span class="chip" id="q-topic">-</span><span class="lvl l1" id="q-level">Asas</span></div>
+          <div class="q-text" id="q-text"></div>
+          <div class="q-math" id="q-math"></div>
+          <div class="answer-row">
+            <input id="answer" autocomplete="off" placeholder="Jawapan">
+            <button class="btn btn-primary" id="submit-ans" data-i18n="submit">Hantar</button>
+          </div>
+          <div class="keypad" id="keypad">
+            <button>-</button><button>/</button><button>.</button><button>&lt;</button><button>&gt;</button><button>≤</button><button>≥</button><button>x</button>
+          </div>
+          <div class="feedback" id="feedback"></div>
+          <div class="q-actions">
+            <button class="btn btn-ghost" id="hint-btn" data-i18n="hint">💡 Petunjuk</button>
+            <button class="btn btn-ghost" id="ask-owl" data-i18n="ask_owl">🦉 Tanya Cikgu Owl</button>
+            <button class="btn btn-primary" id="next-q" data-i18n="next">Soalan Seterusnya →</button>
+          </div>
+          <div class="level-track" id="level-track"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROGRESS -->
+    <section class="view" id="view-progress">
+      <div class="card" style="margin-bottom:20px"><h3 data-i18n="badges">🏅 Lencana</h3><div class="badges" id="badges"></div></div>
+      <div class="grid prog-grid" id="prog-grid"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="view-settings">
+      <div class="card" style="max-width:720px">
+        <div class="setting"><div><b data-i18n="s_name">Nama</b><small data-i18n="s_name_d">Cikgu Owl akan panggil anda dengan nama ini</small></div><input type="text" id="set-name" maxlength="20"></div>
+        <div class="setting"><div><b data-i18n="s_lang">Bahasa</b><small>Bahasa Melayu / English</small></div>
+          <div class="seg" id="lang-seg"><button data-lang="ms">BM</button><button data-lang="en">EN</button></div></div>
+        <div class="setting"><div><b data-i18n="s_theme">Tema</b><small data-i18n="s_theme_d">Cerah atau gelap</small></div>
+          <div class="seg" id="theme-seg"><button data-theme="light">☀️</button><button data-theme="dark">🌙</button></div></div>
+        <div class="setting"><div><b data-i18n="s_reset">Set semula kemajuan</b><small data-i18n="s_reset_d">Padam semua XP dan tahap</small></div><button class="btn btn-ghost" id="reset-btn" style="color:var(--danger)">🗑️ Reset</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/static/vendor/katex/katex.min.js"></script>
+<script src="/static/js/i18n.js"></script>
+<script src="/static/js/adaptive.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
