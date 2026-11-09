@@ -3,9 +3,12 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
 // ---------- Persistent store (localStorage) ----------
-const DEFAULT = { name: "Pelajar", form: 1, lang: "ms", theme: "light", xp: 0, correct: 0, streak: 0, lastDay: null, topics: {}, badges: [] };
+const DEFAULT = { v: 1, name: "Pelajar", form: 1, lang: "ms", theme: "light", xp: 0, correct: 0, streak: 0, lastDay: null, topics: {}, badges: [] };
 let S = Object.assign({}, DEFAULT, JSON.parse(localStorage.getItem("mathmentor") || "{}"));
-const save = () => localStorage.setItem("mathmentor", JSON.stringify(S));
+const save = () => {
+  localStorage.setItem("mathmentor", JSON.stringify(S));
+  Sync.schedule();
+};
 const L = () => T[S.lang];
 
 // daily streak
@@ -53,20 +56,24 @@ function applyLang() {
   $$("[data-i18n]").forEach(el => { el.innerHTML = S.lang === "en" ? (I18N.en[el.dataset.i18n] || el.dataset.ms) : el.dataset.ms; });
   $("#chat-input").placeholder = L().placeholder;
   $("#answer").placeholder = L().answer;
-  $$("#lang-seg button").forEach(b => b.classList.toggle("on", b.dataset.lang === S.lang));
+  $$("#lang-seg button, #landing-lang button").forEach(b => b.classList.toggle("on", b.dataset.lang === S.lang));
+  Auth.languageChanged();
+  Sync.languageChanged();
 }
 
 // ---------- Navigation ----------
 let currentView = "home";
 function go(view) {
   currentView = view;
+  document.body.dataset.view = view; // lets mobile CSS give chat the full screen height
+  $(".main").scrollTop = 0;
   $$(".view").forEach(v => v.classList.toggle("active", v.id === "view-" + view));
   $$(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.view === view));
   $("#page-title").textContent = L()[view];
   $("#page-sub").textContent = L()["sub_" + view];
   refresh();
   if (view === "practice" && !currentQ) newQuestion();
-  if (view === "chat") $("#chat-input").focus();
+  if (view === "chat" && Auth.user()) $("#chat-input").focus();
 }
 $$(".nav-btn").forEach(b => b.onclick = () => go(b.dataset.view));
 $("#hero-start").onclick = () => go("practice");
@@ -78,10 +85,25 @@ $$("[data-go]").forEach(b => b.onclick = () => {
 function applyTheme() { document.body.dataset.theme = S.theme; $$("#theme-seg button").forEach(b => b.classList.toggle("on", b.dataset.theme === S.theme)); }
 $$("#form-seg button").forEach(b => b.onclick = () => { S.form = +b.dataset.form; save(); currentTopic = null; currentQ = null; refresh(); if (currentView === "practice") newQuestion(); });
 $$("#theme-seg button").forEach(b => b.onclick = () => { S.theme = b.dataset.theme; save(); applyTheme(); });
-$$("#lang-seg button").forEach(b => b.onclick = () => { S.lang = b.dataset.lang; save(); applyLang(); go(currentView); if (currentQ) showQuestion(); if (!history.length) resetChat(); });
+$$("#lang-seg button, #landing-lang button").forEach(b => b.onclick = () => { S.lang = b.dataset.lang; save(); applyLang(); go(currentView); if (currentQ) showQuestion(); if (!history.length) resetChat(); });
 $("#set-name").value = S.name;
 $("#set-name").onchange = e => { S.name = e.target.value.trim() || "Pelajar"; save(); refresh(); toast(L().saved); };
-$("#reset-btn").onclick = () => { if (confirm(L().reset_confirm)) { const keep = { name: S.name, lang: S.lang, theme: S.theme, form: S.form }; S = Object.assign({}, DEFAULT, keep); save(); updateStreakSafe(); refresh(); } };
+$("#reset-btn").onclick = async () => {
+  if (!confirm(L().reset_confirm)) return;
+  const keep = { name: S.name, lang: S.lang, theme: S.theme, form: S.form };
+  S = Object.assign({}, DEFAULT, keep);
+  save(); updateStreakSafe(); refresh();
+  await Sync.flush();
+};
+$("#account-logout").onclick = async () => {
+  try {
+    await Auth.signOut();
+    toast(L().logged_out);
+  } catch (error) {
+    console.error("Sign out failed:", error);
+    toast(error.message || L().auth_network_error);
+  }
+};
 function updateStreakSafe() { S.streak = 1; S.lastDay = new Date().toDateString(); save(); }
 
 // ---------- Topic helpers ----------
@@ -132,6 +154,9 @@ function refresh() {
   $("#topic-list").innerHTML = formTopics().map(t =>
     `<button class="topic-btn ${t.id === currentTopic ? "on" : ""}" data-id="${t.id}"><span>${t.icon} ${tName(t)} <small style="color:var(--muted)">T${t.form}</small></span><span class="pct">${mastery(S.topics[t.id])}%</span></button>`).join("");
   $$("#topic-list .topic-btn").forEach(b => b.onclick = () => { currentTopic = b.dataset.id; newQuestion(); });
+  // On phones the topic list is a horizontal row: keep the selected topic visible.
+  const list = $("#topic-list"), on = list.querySelector(".topic-btn.on");
+  if (on && list.scrollWidth > list.clientWidth) list.scrollLeft = on.offsetLeft - list.offsetLeft - 12;
 
   $("#prog-grid").innerHTML = formTopics().map(t => {
     const st = S.topics[t.id] || {}; const acc = st.total ? Math.round(st.correct / st.total * 100) : 0;
@@ -219,32 +244,63 @@ $("#new-chat").onclick = resetChat;
 async function send(text, forcedMode) {
   text = (text ?? $("#chat-input").value).trim();
   if (!text || busy) return;
+  if (!Auth.user()) {
+    Auth.open(L().auth_chat_required);
+    return;
+  }
   busy = true; $("#chat-input").value = ""; autoGrow();
   addMsg("user", renderMD(text));
   history.push({ role: "user", content: text });
   const el = addMsg("bot", `<div class="typing"><span></span><span></span><span></span></div>`);
   const bubble = el.querySelector(".bubble");
-  let out = "", sources = [];
+  let out = "", sources = [], completed = true;
   try {
-    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" },
+    const token = await Auth.getToken();
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch("/api/chat", { method: "POST", headers,
       body: JSON.stringify({ messages: history, mode: forcedMode || mode, form: S.form }) });
-    const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "";
-    while (true) {
-      const { done, value } = await reader.read(); if (done) break;
-      buf += dec.decode(value, { stream: true });
-      const lines = buf.split("\n"); buf = lines.pop();
-      for (const line of lines) {
-        if (!line) continue; const d = JSON.parse(line);
-        if (d.sources) sources = d.sources;
-        if (d.error) out += `\n⚠️ ${d.error}`;
-        if (d.token) out += d.token;
-        bubble.innerHTML = renderMD(out); $("#messages").scrollTop = 1e9;
+    if (res.status === 401) {
+      out = L().auth_chat_required;
+      completed = false;
+      Auth.open(out);
+      bubble.textContent = out;
+    } else if (res.status === 429) {
+      const body = await res.json().catch(() => ({}));
+      out = typeof body.detail === "string" ? body.detail : L().rate_limited;
+      completed = false;
+      bubble.textContent = out;
+    } else if (!res.ok) {
+      throw new Error(`Chat request failed (${res.status})`);
+    } else {
+      const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "";
+      while (true) {
+        const { done, value } = await reader.read(); if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n"); buf = lines.pop();
+        for (const line of lines) {
+          if (!line) continue; const d = JSON.parse(line);
+          if (d.sources) sources = d.sources;
+          if (d.error) { out += `\n⚠️ ${d.error}`; completed = false; }
+          if (d.token) out += d.token;
+          bubble.innerHTML = renderMD(out); $("#messages").scrollTop = 1e9;
+        }
       }
     }
-  } catch (e) { out = "⚠️ " + L().ai_off; bubble.innerHTML = out; }
+  } catch (e) {
+    console.error("Chat request failed:", e);
+    out = "⚠️ " + L().ai_off;
+    completed = false;
+    bubble.textContent = out;
+  }
   if (sources.length) el.querySelector("div:last-child").insertAdjacentHTML("beforeend", `<div class="src">📚 ${sources.map(s => `<span>${esc(s)}</span>`).join("")}</div>`);
-  history.push({ role: "assistant", content: out });
-  S.chats = (S.chats || 0) + 1; S.xp += 2; save(); checkBadges(); refresh();
+  if (completed) {
+    history.push({ role: "assistant", content: out });
+    S.chats = (S.chats || 0) + 1; S.xp += 2; save(); checkBadges(); refresh();
+  } else {
+    // Don't send error/login text back to the tutor as if it were its own reply.
+    history.pop();
+  }
   busy = false;
 }
 $("#send-btn").onclick = () => send();
@@ -261,10 +317,29 @@ async function checkAI() {
   const pill = $("#ai-status"), dot = pill.querySelector(".dot"), txt = pill.querySelector("span");
   try {
     const h = await (await fetch("/api/health")).json();
-    dot.className = "dot " + (h.model_ready ? "ok" : h.ollama ? "" : "bad");
-    txt.textContent = h.model_ready ? L().ai_ok : h.ollama ? L().ai_nomodel : L().ai_off;
+    dot.className = "dot " + (h.ok ? "ok" : "bad");
+    txt.textContent = h.ok ? L().ai_ok : L().ai_off;
   } catch { dot.className = "dot bad"; txt.textContent = L().ai_off; }
 }
 
 // ---------- Init ----------
+function applySyncedState(state) {
+  S = Object.assign({}, DEFAULT, state);
+  localStorage.setItem("mathmentor", JSON.stringify(S));
+  $("#set-name").value = S.name;
+  applyTheme();
+  applyLang();
+  refresh();
+  if (currentView === "practice") newQuestion();
+  if (!history.length) resetChat();
+}
+
+// Called on logout: clear the previous student's progress and chat, keep device preferences.
+function resetSyncedState() {
+  applySyncedState({ lang: S.lang, theme: S.theme });
+  resetChat();
+}
+
+Sync.attach({ getState: () => S, applyState: applySyncedState, resetState: resetSyncedState });
+
 applyTheme(); applyLang(); resetChat(); go("home"); checkBadges(); checkAI(); setInterval(checkAI, 15000);
