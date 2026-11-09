@@ -45,7 +45,7 @@ async def chat(req: ChatReq, user: User = Depends(rate_limited_user)):
     last_user = next((m.content for m in reversed(req.messages) if m.role == "user"), "")
     notes = await retrieve(last_user)
     system = build_system(form=req.form, mode=req.mode, notes=notes)
-    messages_dicts = [m.model_dump() for m in req.messages]
+    messages_dicts = [m.model_dump() for m in req.messages][-6:]
 
     async def gen():
         # 1. Sources first

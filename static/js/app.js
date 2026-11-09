@@ -196,9 +196,17 @@ $("#ask-owl").onclick = () => {
 $$("#keypad button").forEach(b => b.onclick = () => { const i = $("#answer"); i.value += b.textContent; i.focus(); });
 
 // ---------- Chat ----------
-let history = [], mode = "tutor", busy = false;
+let history = [], mode = "tutor", busy = false, chatFontSize = 0.96;
 function setMode(m) { mode = m; $$(".mode-btn").forEach(b => b.classList.toggle("on", b.dataset.mode === m)); }
+function applyChatFontSize() {
+  const root = document.querySelector(".messages");
+  if (!root) return;
+  root.style.setProperty("--chat-font-size", `${chatFontSize}rem`);
+}
 $$(".mode-btn").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+$("#chat-font-down").onclick = () => { chatFontSize = Math.max(0.8, Number((chatFontSize - 0.08).toFixed(2))); applyChatFontSize(); };
+$("#chat-font-up").onclick = () => { chatFontSize = Math.min(1.4, Number((chatFontSize + 0.08).toFixed(2))); applyChatFontSize(); };
+applyChatFontSize();
 
 function addMsg(role, html) {
   const el = document.createElement("div"); el.className = "msg " + role;
