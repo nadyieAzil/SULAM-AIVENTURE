@@ -1,4 +1,5 @@
-// Supabase authentication and guest-mode handling.
+// Supabase authentication. Login is mandatory: the app stays behind the landing page
+// (body.locked) until a student is signed in.
 (function () {
   const screen = document.querySelector("#auth-screen");
   const form = document.querySelector("#auth-form");
@@ -16,7 +17,7 @@
   let authRequired = false;
   let authAvailable = false;
   let mode = "login";
-  let previousFocus = null;
+  const body = document.body;
   const listeners = new Set();
 
   function language() {
@@ -42,39 +43,28 @@
     setMessage("");
   }
 
-  function close() {
-    const shouldRestoreFocus = !screen.hidden && screen.contains(document.activeElement);
-    screen.hidden = true;
-    screen.setAttribute("aria-hidden", "true");
-    setMessage("");
-    if (shouldRestoreFocus && previousFocus?.isConnected) previousFocus.focus();
+  function setFormEnabled(enabled) {
+    [identity, password, submit, tabs.login, tabs.signup].forEach(control => { control.disabled = !enabled; });
   }
 
-  function open(prompt = "") {
-    if (screen.hidden) previousFocus = document.activeElement;
-    if (!authAvailable) {
-      setMode("login");
-      screen.hidden = false;
-      screen.setAttribute("aria-hidden", "false");
-      identity.disabled = true;
-      password.disabled = true;
-      submit.disabled = true;
-      tabs.login.disabled = true;
-      tabs.signup.disabled = true;
-      document.querySelector("#auth-guest").focus();
-      setMessage(prompt || text("auth_unavailable"));
-      return;
-    }
-    identity.disabled = false;
-    password.disabled = false;
-    submit.disabled = false;
-    tabs.login.disabled = false;
-    tabs.signup.disabled = false;
-    setMode("login");
-    screen.hidden = false;
+  // Show the landing page and hide the app.
+  function lock(prompt = "") {
+    const wasLocked = body.classList.contains("locked");
+    body.classList.add("locked");
     screen.setAttribute("aria-hidden", "false");
-    setMessage(prompt);
-    identity.focus();
+    setFormEnabled(authAvailable);
+    if (!wasLocked) setMode("login");
+    setMessage(prompt || (authAvailable ? "" : text("auth_unavailable")));
+    if (authAvailable && !body.classList.contains("auth-pending")) identity.focus();
+  }
+
+  // Reveal the app; only ever for a signed-in student.
+  function unlock() {
+    if (!currentUser) return;
+    body.classList.remove("locked");
+    screen.setAttribute("aria-hidden", "true");
+    password.value = "";
+    setMessage("");
   }
 
   function emit() {
@@ -82,19 +72,17 @@
     window.dispatchEvent(new CustomEvent("mathmentor:authchange", {
       detail: { user: currentUser },
     }));
-    if (currentUser) close();
+    if (currentUser) unlock();
+    else lock();
   }
 
   function userLabel(user) {
-    const name = user?.user_metadata?.name || user?.user_metadata?.username || user?.email;
-    return name || text("account_guest");
+    return user?.user_metadata?.name || user?.user_metadata?.username || user?.email || "";
   }
 
   function updateAccount(user) {
     const status = document.querySelector("#account-status");
-    status.textContent = user ? `${text("account_signed_in")} ${userLabel(user)}` : text("account_guest");
-    document.querySelector("#account-login").hidden = Boolean(user) || !authAvailable;
-    document.querySelector("#account-logout").hidden = !user;
+    status.textContent = user ? `${text("account_signed_in")} ${userLabel(user)}` : "";
   }
 
   function normalizeIdentity(value) {
@@ -160,11 +148,17 @@
     }
   }
 
-  const ready = initialize();
+  setMode("login"); // the page starts locked, so lock() won't set the initial tab state
+
+  // Keep the spinner up until we know whether a session exists, then show app or landing.
+  const ready = initialize().finally(() => {
+    body.classList.remove("auth-pending");
+    if (currentUser) unlock();
+    else lock(body.classList.contains("locked") ? message.textContent : "");
+  });
 
   tabs.login.addEventListener("click", () => setMode("login"));
   tabs.signup.addEventListener("click", () => setMode("signup"));
-  document.querySelector("#auth-guest").addEventListener("click", close);
   form.addEventListener("submit", async event => {
     event.preventDefault();
     if (!authAvailable) {
@@ -209,29 +203,11 @@
     }
   });
 
-  document.addEventListener("keydown", event => {
-    if (screen.hidden) return;
-    if (event.key === "Escape" && !authRequired) {
-      close();
-      return;
-    }
-    if (event.key !== "Tab") return;
-    const controls = [...screen.querySelectorAll("button:not([disabled]), input:not([disabled])")];
-    if (!controls.length) return;
-    const first = controls[0], last = controls[controls.length - 1];
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  });
-
   window.Auth = {
     ready,
-    open,
-    close,
+    // open(prompt): send the student back to the landing page (e.g. session expired → 401).
+    open: lock,
+    close: unlock,
     isRequired: () => authRequired,
     isAvailable: () => authAvailable,
     client: () => client,
@@ -262,7 +238,8 @@
       emit();
     },
     languageChanged: () => {
-      if (!screen.hidden) setMode(mode);
+      submit.textContent = text(submit.dataset.i18n);
+      if (!authAvailable && body.classList.contains("locked")) setMessage(text("auth_unavailable"));
       updateAccount(currentUser);
     },
   };

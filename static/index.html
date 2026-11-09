@@ -2,7 +2,11 @@
 <html lang="ms">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#f3f5fb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f1222" media="(prefers-color-scheme: dark)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>AI MathMentor – Pembantu Matematik Pintar</title>
   <meta name="description" content="AI MathMentor: tutor Matematik pintar untuk pelajar Tingkatan 1-3 dengan petunjuk langkah demi langkah, pengesan kesilapan dan latihan adaptif.">
   <link rel="icon" href="/static/img/owl.jpg">
@@ -11,7 +15,7 @@
   <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body>
+<body class="auth-pending locked">
 <div class="app">
   <!-- ===== Sidebar ===== -->
   <aside class="sidebar">
@@ -157,10 +161,9 @@
     <section class="view" id="view-settings">
       <div class="card" style="max-width:720px">
         <div class="setting account-setting">
-          <div><b data-i18n="s_account">Akaun</b><small id="account-status">Tetamu · kemajuan disimpan pada peranti ini</small></div>
+          <div><b data-i18n="s_account">Akaun</b><small id="account-status"></small></div>
           <div class="account-actions">
-            <button class="btn btn-ghost" id="account-login" type="button" data-i18n="account_login">Log masuk / Daftar</button>
-            <button class="btn btn-ghost" id="account-logout" type="button" hidden data-i18n="account_logout">Log keluar</button>
+            <button class="btn btn-ghost" id="account-logout" type="button" data-i18n="account_logout">Log keluar</button>
           </div>
         </div>
         <div class="setting"><div><b data-i18n="s_name">Nama</b><small data-i18n="s_name_d">Cikgu Owl akan panggil anda dengan nama ini</small></div><input type="text" id="set-name" maxlength="20"></div>
@@ -175,11 +178,30 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<div class="auth-screen" id="auth-screen" hidden aria-hidden="true">
-  <section class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-description">
-    <img class="auth-mascot" src="/static/img/owl.jpg" alt="">
-    <h2 id="auth-title" data-i18n="auth_title">Selamat datang ke AI MathMentor</h2>
-    <p id="auth-description" data-i18n="auth_description">Log masuk untuk menyimpan kemajuan dan berbual dengan Cikgu Owl.</p>
+<!-- ===== Landing / login (shown until the student is signed in) ===== -->
+<div class="landing" id="auth-screen">
+  <header class="landing-nav">
+    <div class="brand">
+      <img src="/static/img/owl.jpg" alt="Cikgu Owl">
+      <div><h1>AI MathMentor</h1><small data-i18n="tagline">Pembantu Matematik Pintar</small></div>
+    </div>
+    <div class="seg" id="landing-lang" aria-label="Bahasa / Language"><button data-lang="ms" type="button">BM</button><button data-lang="en" type="button">EN</button></div>
+  </header>
+
+  <main class="landing-main">
+    <section class="landing-intro">
+      <span class="landing-kicker" data-i18n="land_kicker">KSSM · Tingkatan 1–3</span>
+      <h2 class="landing-title" data-i18n="land_title">Belajar Matematik langkah demi langkah bersama Cikgu Owl</h2>
+      <p class="landing-sub" data-i18n="land_sub">Tutor AI yang membimbing anda dengan petunjuk, bukan terus beri jawapan. Log masuk untuk mula belajar dan simpan kemajuan anda di semua peranti.</p>
+      <div class="landing-demo" aria-hidden="true">
+        <div class="demo-msg demo-user" data-i18n="land_demo_q">Selesaikan 3x − 4 = 11</div>
+        <div class="demo-msg demo-bot"><img src="/static/img/owl.jpg" alt=""><span data-i18n="land_demo_a">Bagus! Langkah pertama: tambah 4 pada kedua-dua belah. Apa yang anda dapat? 🤔</span></div>
+      </div>
+    </section>
+
+    <section class="auth-card" aria-labelledby="auth-title" aria-describedby="auth-description">
+      <h2 id="auth-title" data-i18n="auth_title">Masuk ke akaun anda</h2>
+      <p id="auth-description" data-i18n="auth_description">Belum ada akaun? Pilih Daftar – percuma.</p>
     <div class="auth-tabs" role="tablist" aria-label="Jenis akaun">
       <button id="auth-tab-login" type="button" role="tab" aria-selected="true" data-i18n="auth_login_tab">Log masuk</button>
       <button id="auth-tab-signup" type="button" role="tab" aria-selected="false" data-i18n="auth_signup_tab">Daftar</button>
@@ -193,8 +215,17 @@
       <p class="auth-message" id="auth-message" role="alert" aria-live="assertive"></p>
       <button class="btn btn-primary auth-submit" id="auth-submit" type="submit" data-i18n="auth_login_submit">Log masuk</button>
     </form>
-    <button class="auth-guest" id="auth-guest" type="button" data-i18n="auth_guest">Teruskan sebagai tetamu</button>
-  </section>
+    </section>
+
+    <ul class="landing-features">
+      <li><span class="lf-ic">💬</span><div><b data-i18n="land_f1_t">Tutor AI</b><small data-i18n="land_f1_p">Petunjuk langkah demi langkah dalam BM atau English.</small></div></li>
+      <li><span class="lf-ic">🔍</span><div><b data-i18n="land_f2_t">Semak jalan kerja</b><small data-i18n="land_f2_p">Kesan kesilapan lazim dalam penyelesaian anda.</small></div></li>
+      <li><span class="lf-ic">🎯</span><div><b data-i18n="land_f3_t">Latihan adaptif</b><small data-i18n="land_f3_p">Soalan yang sepadan dengan tahap anda.</small></div></li>
+      <li><span class="lf-ic">☁️</span><div><b data-i18n="land_f4_t">Kemajuan di mana-mana</b><small data-i18n="land_f4_p">XP, rantaian dan lencana disegerakkan antara peranti.</small></div></li>
+    </ul>
+  </main>
+
+  <footer class="landing-foot" data-i18n="land_foot">Untuk kegunaan pendidikan · Pelajar Tingkatan 1–3</footer>
 </div>
 
 <script src="/static/vendor/katex/katex.min.js"></script>

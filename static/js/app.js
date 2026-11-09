@@ -56,7 +56,7 @@ function applyLang() {
   $$("[data-i18n]").forEach(el => { el.innerHTML = S.lang === "en" ? (I18N.en[el.dataset.i18n] || el.dataset.ms) : el.dataset.ms; });
   $("#chat-input").placeholder = L().placeholder;
   $("#answer").placeholder = L().answer;
-  $$("#lang-seg button").forEach(b => b.classList.toggle("on", b.dataset.lang === S.lang));
+  $$("#lang-seg button, #landing-lang button").forEach(b => b.classList.toggle("on", b.dataset.lang === S.lang));
   Auth.languageChanged();
   Sync.languageChanged();
 }
@@ -65,14 +65,15 @@ function applyLang() {
 let currentView = "home";
 function go(view) {
   currentView = view;
+  document.body.dataset.view = view; // lets mobile CSS give chat the full screen height
+  $(".main").scrollTop = 0;
   $$(".view").forEach(v => v.classList.toggle("active", v.id === "view-" + view));
   $$(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.view === view));
   $("#page-title").textContent = L()[view];
   $("#page-sub").textContent = L()["sub_" + view];
   refresh();
   if (view === "practice" && !currentQ) newQuestion();
-  if (view === "chat" && !(Auth.isRequired() && !Auth.user())) $("#chat-input").focus();
-  if (view === "chat" && Auth.isRequired() && !Auth.user()) Auth.open(L().auth_chat_required);
+  if (view === "chat" && Auth.user()) $("#chat-input").focus();
 }
 $$(".nav-btn").forEach(b => b.onclick = () => go(b.dataset.view));
 $("#hero-start").onclick = () => go("practice");
@@ -84,7 +85,7 @@ $$("[data-go]").forEach(b => b.onclick = () => {
 function applyTheme() { document.body.dataset.theme = S.theme; $$("#theme-seg button").forEach(b => b.classList.toggle("on", b.dataset.theme === S.theme)); }
 $$("#form-seg button").forEach(b => b.onclick = () => { S.form = +b.dataset.form; save(); currentTopic = null; currentQ = null; refresh(); if (currentView === "practice") newQuestion(); });
 $$("#theme-seg button").forEach(b => b.onclick = () => { S.theme = b.dataset.theme; save(); applyTheme(); });
-$$("#lang-seg button").forEach(b => b.onclick = () => { S.lang = b.dataset.lang; save(); applyLang(); go(currentView); if (currentQ) showQuestion(); if (!history.length) resetChat(); });
+$$("#lang-seg button, #landing-lang button").forEach(b => b.onclick = () => { S.lang = b.dataset.lang; save(); applyLang(); go(currentView); if (currentQ) showQuestion(); if (!history.length) resetChat(); });
 $("#set-name").value = S.name;
 $("#set-name").onchange = e => { S.name = e.target.value.trim() || "Pelajar"; save(); refresh(); toast(L().saved); };
 $("#reset-btn").onclick = async () => {
@@ -94,7 +95,6 @@ $("#reset-btn").onclick = async () => {
   save(); updateStreakSafe(); refresh();
   await Sync.flush();
 };
-$("#account-login").onclick = () => Auth.open();
 $("#account-logout").onclick = async () => {
   try {
     await Auth.signOut();
@@ -154,6 +154,9 @@ function refresh() {
   $("#topic-list").innerHTML = formTopics().map(t =>
     `<button class="topic-btn ${t.id === currentTopic ? "on" : ""}" data-id="${t.id}"><span>${t.icon} ${tName(t)} <small style="color:var(--muted)">T${t.form}</small></span><span class="pct">${mastery(S.topics[t.id])}%</span></button>`).join("");
   $$("#topic-list .topic-btn").forEach(b => b.onclick = () => { currentTopic = b.dataset.id; newQuestion(); });
+  // On phones the topic list is a horizontal row: keep the selected topic visible.
+  const list = $("#topic-list"), on = list.querySelector(".topic-btn.on");
+  if (on && list.scrollWidth > list.clientWidth) list.scrollLeft = on.offsetLeft - list.offsetLeft - 12;
 
   $("#prog-grid").innerHTML = formTopics().map(t => {
     const st = S.topics[t.id] || {}; const acc = st.total ? Math.round(st.correct / st.total * 100) : 0;
@@ -241,7 +244,7 @@ $("#new-chat").onclick = resetChat;
 async function send(text, forcedMode) {
   text = (text ?? $("#chat-input").value).trim();
   if (!text || busy) return;
-  if (Auth.isRequired() && !Auth.user()) {
+  if (!Auth.user()) {
     Auth.open(L().auth_chat_required);
     return;
   }
@@ -337,13 +340,6 @@ function resetSyncedState() {
   resetChat();
 }
 
-// Account status in Settings is rendered by auth.js; here we only gate chat.
-Auth.onChange(user => {
-  if (!user && Auth.isRequired() && currentView === "chat") Auth.open(L().auth_chat_required);
-});
 Sync.attach({ getState: () => S, applyState: applySyncedState, resetState: resetSyncedState });
 
 applyTheme(); applyLang(); resetChat(); go("home"); checkBadges(); checkAI(); setInterval(checkAI, 15000);
-Auth.ready.then(() => {
-  if (Auth.isRequired() && !Auth.user()) Auth.open();
-});
