@@ -49,6 +49,7 @@
         <div class="seg" id="form-seg" title="Tingkatan">
           <button data-form="1">T1</button><button data-form="2">T2</button><button data-form="3">T3</button>
         </div>
+        <span class="sync-status" id="sync-status" role="status" aria-live="polite" data-state="saved">Disimpan di peranti</span>
         <span class="chip" title="XP">⭐ <span id="xp-chip">0</span> XP</span>
         <span class="chip" title="Streak">🔥 <span id="streak-chip">0</span></span>
       </div>
@@ -87,7 +88,7 @@
         <div class="card chat-card">
           <div class="chat-head">
             <img src="/static/img/owl.jpg" alt="">
-            <div><b>Cikgu Owl</b><small data-i18n="chat_sub">Tutor Matematik AI · Offline</small></div>
+            <div><b>Cikgu Owl</b><small data-i18n="chat_sub">Tutor Matematik AI</small></div>
             <div class="spacer"></div>
             <div class="chat-font-controls" aria-label="Adjust chat font size">
               <button class="icon-btn tiny" id="chat-font-down" type="button" aria-label="Reduce font size">A−</button>
@@ -155,6 +156,13 @@
     <!-- SETTINGS -->
     <section class="view" id="view-settings">
       <div class="card" style="max-width:720px">
+        <div class="setting account-setting">
+          <div><b data-i18n="s_account">Akaun</b><small id="account-status">Tetamu · kemajuan disimpan pada peranti ini</small></div>
+          <div class="account-actions">
+            <button class="btn btn-ghost" id="account-login" type="button" data-i18n="account_login">Log masuk / Daftar</button>
+            <button class="btn btn-ghost" id="account-logout" type="button" hidden data-i18n="account_logout">Log keluar</button>
+          </div>
+        </div>
         <div class="setting"><div><b data-i18n="s_name">Nama</b><small data-i18n="s_name_d">Cikgu Owl akan panggil anda dengan nama ini</small></div><input type="text" id="set-name" maxlength="20"></div>
         <div class="setting"><div><b data-i18n="s_lang">Bahasa</b><small>Bahasa Melayu / English</small></div>
           <div class="seg" id="lang-seg"><button data-lang="ms">BM</button><button data-lang="en">EN</button></div></div>
@@ -167,9 +175,34 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<div class="auth-screen" id="auth-screen" hidden aria-hidden="true">
+  <section class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-description">
+    <img class="auth-mascot" src="/static/img/owl.jpg" alt="">
+    <h2 id="auth-title" data-i18n="auth_title">Selamat datang ke AI MathMentor</h2>
+    <p id="auth-description" data-i18n="auth_description">Log masuk untuk menyimpan kemajuan dan berbual dengan Cikgu Owl.</p>
+    <div class="auth-tabs" role="tablist" aria-label="Jenis akaun">
+      <button id="auth-tab-login" type="button" role="tab" aria-selected="true" data-i18n="auth_login_tab">Log masuk</button>
+      <button id="auth-tab-signup" type="button" role="tab" aria-selected="false" data-i18n="auth_signup_tab">Daftar</button>
+    </div>
+    <form id="auth-form">
+      <label for="auth-identity" id="auth-identity-label" data-i18n="auth_identity">E-mel atau nama pengguna</label>
+      <input id="auth-identity" name="identity" type="text" autocomplete="username" required>
+      <label for="auth-password" data-i18n="auth_password">Kata laluan</label>
+      <input id="auth-password" name="password" type="password" autocomplete="current-password" required>
+      <p class="auth-privacy" id="auth-privacy" data-i18n="auth_privacy">Maklumat akaun dan kemajuan anda disimpan dengan selamat untuk penyegerakan antara peranti.</p>
+      <p class="auth-message" id="auth-message" role="alert" aria-live="assertive"></p>
+      <button class="btn btn-primary auth-submit" id="auth-submit" type="submit" data-i18n="auth_login_submit">Log masuk</button>
+    </form>
+    <button class="auth-guest" id="auth-guest" type="button" data-i18n="auth_guest">Teruskan sebagai tetamu</button>
+  </section>
+</div>
+
 <script src="/static/vendor/katex/katex.min.js"></script>
+<script src="/static/vendor/supabase/supabase.js"></script>
 <script src="/static/js/i18n.js"></script>
 <script src="/static/js/adaptive.js"></script>
+<script src="/static/js/auth.js"></script>
+<script src="/static/js/sync.js"></script>
 <script src="/static/js/app.js"></script>
 </body>
 </html>
