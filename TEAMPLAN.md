@@ -129,7 +129,8 @@ A trigger creates an empty row when a user signs up.
 ### E. Login method (decision, do not change)
 - Students sign in with **email + password**. Optionally the UI also offers **username + password**. In that case M3 turns the username into the pseudo-email `<username>@mathmentor.student` before calling Supabase.
 - **M1 must verify on Day 1** that Supabase accepts that pseudo-email domain (with "Confirm email" off). If it doesn't, M1 tells the team and the team picks another domain, then updates this section.
-- **Guest rule:** a guest (not logged in) can use Practice and Progress (stored in `localStorage` only). **Chat requires login** in production (`AUTH_REQUIRED=true`).
+- **Login is mandatory** (team decision, 2026-11-09; replaces the earlier guest rule). There is no guest access: the app shows a landing/login page until the student is signed in, and Home, Chat, Practice, Progress and Settings all require login. Logging out, an expired session (`401`) or Supabase being unavailable return the student to the landing page.
+- The frontend gate is for usability only, not security. The server must still enforce login for chat with `AUTH_REQUIRED=true` in production.
 
 ## 0.6 Git workflow
 - M4 does `git init`, creates the GitHub repo and pushes the baseline (see Part 4, task 1).
@@ -304,7 +305,7 @@ To **M4**: final env var values and the provider's quota limits (so M1/M4 can se
 
 # PART 3: M3, FRONTEND (login, cloud sync, chat integration)
 
-**Goal:** students can sign up, log in and log out; their progress follows them across devices; chat sends the login token; the app still works offline or as a guest for practice.
+**Goal:** students can sign up, log in and log out; their progress follows them across devices; chat sends the login token; signed-in students can keep practising offline. No guest access (contract E).
 **You deliver:** `static/js/auth.js`, `static/js/sync.js`, login UI in `static/index.html` and `static/css/style.css`, small edits in `static/js/app.js`, `i18n.js`, local copy of supabase-js.
 
 ## Tasks
@@ -313,10 +314,10 @@ To **M4**: final env var values and the provider's quota limits (so M1/M4 can se
 Download a pinned version of `@supabase/supabase-js` UMD build (for example `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js`, any version older than 2 weeks) into `static/vendor/supabase/supabase.js`, and load it with a `<script>` tag before your own scripts. (The project already vendors KaTeX locally; follow that convention.)
 
 ### 3.2 Public config [AI]
-At startup `fetch("/api/config")` → `{supabaseUrl, supabaseAnonKey, authRequired}` and create the client: `const sb = supabase.createClient(supabaseUrl, supabaseAnonKey)`. Never hard-code keys. If `/api/config` fails or returns empty values, run in guest-only mode and show nothing broken.
+At startup `fetch("/api/config")` → `{supabaseUrl, supabaseAnonKey, authRequired}` and create the client: `const sb = supabase.createClient(supabaseUrl, supabaseAnonKey)`. Never hard-code keys. If `/api/config` fails or returns empty values, keep the landing page up with a clear "login unavailable" message and the form disabled. Never open the app without a session.
 
 ### 3.3 Login UI + `static/js/auth.js` [AI]
-- A full-screen login card (BM + English, via `i18n.js`) with tabs **Log masuk / Daftar**, fields email (or username) and password, a **"Teruskan sebagai tetamu"** (continue as guest) button, and clear error messages (wrong password, weak password min 6, network error). Mobile-first, keyboard accessible, labels on inputs, visible focus.
+- A full landing page (BM + English, via `i18n.js`) shown until the student is signed in: a short introduction to the app and a login card with tabs **Log masuk / Daftar**, fields email (or username) and password, and clear error messages (wrong password, weak password min 6, network error). No guest button. Mobile-first, keyboard accessible, labels on inputs, visible focus.
 - Username mode (contract E): if the input has no `@`, convert to `<username>@mathmentor.student` (lowercase, trimmed, allow `a-z0-9._-`).
 - API: `sb.auth.signUp({email,password})`, `sb.auth.signInWithPassword(...)`, `sb.auth.signOut()`, `sb.auth.onAuthStateChange(...)`, `sb.auth.getSession()`.
 - Add a logout button and show the user's name/email in Settings.
@@ -326,7 +327,7 @@ At startup `fetch("/api/config")` → `{supabaseUrl, supabaseAnonKey, authRequir
 ### 3.4 Cloud sync + `static/js/sync.js` [AI]
 - **Load on login:** `sb.from("profiles").select("state, updated_at").eq("id", user.id).single()`.
 - **Merge rules** (implement exactly):
-  1. Cloud `state` empty `{}` and local has progress (`xp>0`) → upload local (guest progress becomes the account's).
+  1. Cloud `state` empty `{}` and local has progress (`xp>0`) → upload local (progress saved on the device before the first login becomes the account's).
   2. Cloud has data and local is default/empty → take cloud.
   3. Both have data → keep the one with higher `xp`; ask via `confirm()` with a clear BM/English message showing both XP values.
 - **Save:** wrap the existing `save()` in `app.js`. After writing `localStorage`, schedule a debounced (2 s) `sb.from("profiles").upsert({ id: user.id, state: S, updated_at: new Date().toISOString() })`. Also flush on `visibilitychange` (hidden) and `beforeunload` where possible.
@@ -342,19 +343,21 @@ In `app.js` where `fetch("/api/chat", ...)` is called: add `headers: {"Content-T
 - Stream `{"error": ...}` lines → show in the chat bubble (already supported; keep it).
 - Remove or replace the Ollama-specific wording ("buka aplikasi Ollama") in `i18n.js` / `app.js` if present. Search for "Ollama" in `static/`.
 
-### 3.6 Guest rules [AI]
-Follow contract E: guest can use Practice and Progress; opening Chat as a guest when `authRequired` is true shows a "log in to chat" prompt instead of failing silently.
+### 3.6 Mandatory login [AI]
+Follow contract E: no guest access. Until a session exists, only the landing page is visible. Logout, an expired session (`401` from `/api/chat`) and an unavailable Supabase all return to the landing page. On logout, clear the previous student's progress from the device (keep unsynced progress stored for that student) so a shared school computer does not leak one student's data to the next.
 
 ### 3.7 Testing [AI + HUMAN]
-Work against M1's real Supabase project (with `AUTH_REQUIRED=false` locally first, then `true`). [HUMAN] test on a real phone (Chrome Android / Safari iOS) and one desktop browser. Check: sign-up, log-in, log-out, refresh keeps session, progress appears on a second device, offline mode, guest → account merge.
+Work against M1's real Supabase project (with `AUTH_REQUIRED=false` locally first, then `true`). [HUMAN] test on a real phone (Chrome Android / Safari iOS) and one desktop browser. Check: landing page blocks access when logged out, sign-up, log-in, log-out, refresh keeps session, progress appears on a second device, offline mode, existing device progress merges on first login.
 
 ## Acceptance checklist
 - [ ] Sign up → a new row appears in `profiles` (check in the Supabase Table Editor).
 - [ ] Do 3 practice questions → `state.xp` and `state.topics` update in the table within ~3 s.
 - [ ] Log in on another browser → same progress.
-- [ ] Guest progress merges as per 3.4 rules, with no data loss.
+- [ ] Logged out, only the landing page is reachable (no guest access).
+- [ ] Progress already on the device merges on first login as per 3.4 rules, with no data loss.
+- [ ] Log out, then log in as a different student on the same browser: the second student does not see the first student's progress.
 - [ ] Turn off the network → app still works; after turning on, data syncs.
-- [ ] Chat works logged in; logged out with `authRequired=true` shows the login prompt.
+- [ ] Chat works logged in; an expired or invalid session (`401`) returns the student to the landing page.
 - [ ] No secrets or hard-coded keys in `static/`. The anon key arrives only via `/api/config`.
 - [ ] Works at 360 px width; BM and English both complete; light and dark theme OK; no console errors.
 
@@ -456,7 +459,7 @@ Rules: one PR per step; a different member reviews; if `main` moved, rebase befo
 | 2 | **Share URL + anon key** | `llm.py` streaming | Login/sign-up working | Render service created |
 | 3 to 4 | `auth.py` + tests | `rag.py` + embeddings | Cloud sync | smoke script, CORS |
 | 5 | | **Step 2 merged** | Chat token + 401/429 UX | deploy staging |
-| 6 | **Step 3 merged**; keep-alive | prompt quality tests | Guest merge + offline | privacy doc |
+| 6 | **Step 3 merged**; keep-alive | prompt quality tests | Login gate + merge + offline | privacy doc |
 | 7 | | | **Step 4 merged** | docs |
 | 8 | all: full-team test on staging, log bugs | | | |
 | 9 | fix bugs | fix bugs | fix bugs | **Step 5**, release |
@@ -465,7 +468,7 @@ Rules: one PR per step; a different member reviews; if `main` moved, rebase befo
 Daily: a 15-minute stand-up (done / next / blocked). Whoever finishes early helps with testing.
 
 ## 5.3 E2E checklist (run by M4 with everyone; record PASS/FAIL)
-1. [ ] Open the live URL on a phone; the page loads (allow 60 s after sleep).
+1. [ ] Open the live URL on a phone; the landing page loads (allow 60 s after sleep) and the app cannot be used without logging in.
 2. [ ] Sign up a new student; a `profiles` row appears in Supabase.
 3. [ ] Log out and log in again; the session works.
 4. [ ] Do 5 practice questions; XP and level change; after refresh they persist.

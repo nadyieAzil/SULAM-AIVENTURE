@@ -121,7 +121,8 @@ input, textarea, select { font-family: inherit; color: inherit; }
   display: flex; align-items: center; justify-content: space-between; gap: 20px;
   position: relative; overflow: hidden; box-shadow: var(--shadow-lg);
 }
-.hero::before, .hero::after { content: ""; position: absolute; border-radius: 50%; background: rgba(255, 255, 255, .1); }
+.hero::before, .hero::after { content: ""; position: absolute; border-radius: 50%; background: rgba(255, 255, 255, .1); pointer-events: none; }
+.hero > div { position: relative; z-index: 1; }
 .hero::before { width: 260px; height: 260px; right: -60px; top: -90px; }
 .hero::after { width: 160px; height: 160px; right: 180px; bottom: -90px; }
 .hero h2 { font-size: 2rem; font-weight: 900; margin-bottom: 6px; }
