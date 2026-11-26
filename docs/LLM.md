@@ -33,3 +33,4 @@
 - This project uses a hosted OpenAI-compatible API configured through `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL`.
 - The app should fail gracefully with a student-safe Malay error if the provider is down, rate-limited, or misconfigured.
 - Rate limits and quotas should be checked against the provider dashboard before public demo day.
+- Provider failures log the HTTP status, model, provider error code/name, and request ID to the server console. API keys and student prompts are not logged.

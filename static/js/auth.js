@@ -6,11 +6,14 @@
   const message = document.querySelector("#auth-message");
   const identity = document.querySelector("#auth-identity");
   const password = document.querySelector("#auth-password");
+  const confirmGroup = document.querySelector("#auth-confirm-group");
+  const confirmPassword = document.querySelector("#auth-password-confirm");
   const submit = document.querySelector("#auth-submit");
   const tabs = {
     login: document.querySelector("#auth-tab-login"),
     signup: document.querySelector("#auth-tab-signup"),
   };
+  const passwordToggles = [...form.querySelectorAll("[data-password-toggle]")];
   let client = null;
   let session = null;
   let currentUser = null;
@@ -32,6 +35,21 @@
     message.textContent = value;
   }
 
+  function updatePasswordToggle(toggle, visible) {
+    const input = document.getElementById(toggle.dataset.passwordToggle);
+    const label = text(visible ? "auth_hide_password" : "auth_show_password");
+    input.type = visible ? "text" : "password";
+    toggle.setAttribute("aria-label", label);
+    toggle.title = label;
+    toggle.setAttribute("aria-pressed", String(visible));
+    toggle.querySelector(".eye-open").hidden = visible;
+    toggle.querySelector(".eye-closed").hidden = !visible;
+  }
+
+  function resetPasswordVisibility() {
+    passwordToggles.forEach(toggle => updatePasswordToggle(toggle, false));
+  }
+
   function setMode(nextMode) {
     mode = nextMode;
     tabs.login.setAttribute("aria-selected", String(mode === "login"));
@@ -39,12 +57,16 @@
     submit.dataset.i18n = mode === "signup" ? "auth_signup_submit" : "auth_login_submit";
     submit.textContent = text(submit.dataset.i18n);
     password.autocomplete = mode === "signup" ? "new-password" : "current-password";
+    confirmGroup.hidden = mode !== "signup";
+    confirmPassword.required = mode === "signup";
+    confirmPassword.value = "";
+    resetPasswordVisibility();
     document.querySelector("#auth-privacy").hidden = mode !== "signup";
     setMessage("");
   }
 
   function setFormEnabled(enabled) {
-    [identity, password, submit, tabs.login, tabs.signup].forEach(control => { control.disabled = !enabled; });
+    [identity, password, confirmPassword, ...passwordToggles, submit, tabs.login, tabs.signup].forEach(control => { control.disabled = !enabled; });
   }
 
   // Show the landing page and hide the app.
@@ -64,6 +86,8 @@
     body.classList.remove("locked");
     screen.setAttribute("aria-hidden", "true");
     password.value = "";
+    confirmPassword.value = "";
+    resetPasswordVisibility();
     setMessage("");
   }
 
@@ -159,6 +183,12 @@
 
   tabs.login.addEventListener("click", () => setMode("login"));
   tabs.signup.addEventListener("click", () => setMode("signup"));
+  passwordToggles.forEach(toggle => {
+    toggle.addEventListener("click", () => {
+      const input = document.getElementById(toggle.dataset.passwordToggle);
+      updatePasswordToggle(toggle, input.type === "password");
+    });
+  });
   form.addEventListener("submit", async event => {
     event.preventDefault();
     if (!authAvailable) {
@@ -168,6 +198,11 @@
     const rawIdentity = identity.value.trim();
     const rawPassword = password.value;
     if (!rawIdentity || !rawPassword) return;
+    if (mode === "signup" && rawPassword !== confirmPassword.value) {
+      setMessage(text("auth_password_mismatch"));
+      confirmPassword.focus();
+      return;
+    }
     if (mode === "signup" && rawPassword.length < 6) {
       setMessage(text("auth_weak_password"));
       password.focus();
@@ -239,6 +274,10 @@
     },
     languageChanged: () => {
       submit.textContent = text(submit.dataset.i18n);
+      passwordToggles.forEach(toggle => {
+        const input = document.getElementById(toggle.dataset.passwordToggle);
+        updatePasswordToggle(toggle, input.type === "text");
+      });
       if (!authAvailable && body.classList.contains("locked")) setMessage(text("auth_unavailable"));
       updateAccount(currentUser);
     },

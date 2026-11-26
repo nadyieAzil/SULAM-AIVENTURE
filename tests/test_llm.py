@@ -8,15 +8,20 @@ from backend.llm import LLMError, stream_chat
 
 
 class FakeStreamResponse:
-    def __init__(self, status_code, lines=None):
+    def __init__(self, status_code, lines=None, body=b"", headers=None):
         self.status_code = status_code
         self._lines = lines or []
+        self._body = body
+        self.headers = headers or {}
 
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
         return False
+
+    async def aread(self):
+        return self._body
 
     async def aiter_lines(self):
         for line in self._lines:
@@ -58,10 +63,19 @@ async def test_stream_chat_parses_sse_tokens():
 
 
 @pytest.mark.asyncio
-async def test_stream_chat_maps_429_to_llm_error():
+async def test_stream_chat_logs_provider_details_and_maps_429(caplog):
     class RateLimitedClient(FakeAsyncClient):
         def stream(self, method, url, **kwargs):
-            return FakeStreamResponse(429, [])
+            body = json.dumps({
+                "error": {
+                    "code": 429,
+                    "message": "Provider rate limit reached",
+                    "metadata": {"provider_name": "Test Provider"},
+                },
+            }).encode()
+            return FakeStreamResponse(
+                429, body=body, headers={"x-request-id": "request-123"},
+            )
 
     with patch("backend.llm.settings") as settings, \
          patch("backend.llm.httpx.AsyncClient", return_value=RateLimitedClient()):
@@ -72,3 +86,8 @@ async def test_stream_chat_maps_429_to_llm_error():
         with pytest.raises(LLMError, match="Cikgu Owl sedang sibuk"):
             async for _ in stream_chat("System", [{"role": "user", "content": "Hi"}]):
                 pass
+
+    assert "status=429" in caplog.text
+    assert "request_id=request-123" in caplog.text
+    assert "error_code=429" in caplog.text
+    assert "provider=Test Provider" in caplog.text

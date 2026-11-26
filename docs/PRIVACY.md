@@ -14,6 +14,7 @@ Kami hanya mengumpul maklumat yang minimum dan perlu untuk fungsi pembelajaran:
 - **Maklumat Akaun:** Nama panggilan pelajar, e-mel atau nama pengguna (contoh: `pelajar@mathmentor.student`), serta kata laluan yang disulitkan (*hashed* secara selamat oleh Supabase Auth).
 - **Kemajuan Pembelajaran:** Mata ganjaran (XP), tahap penguasaan topik (Level 1–3), rantaian hari belajar (*streak*), rekod latihan soalan, dan lencana yang dicapai.
 - **Interaksi Tutor:** Soalan matematik yang ditanya kepada Cikgu Owl untuk tujuan menjana petunjuk bimbingan.
+- **Maklum Balas:** Penerangan masalah dan lampiran pilihan yang dihantar melalui borang maklum balas akan dikongsi melalui e-mel dengan pasukan projek di `sulamaiventure@gmail.com`.
 
 ### 3. Cara Maklumat Digunakan
 - **Penyegerakan Peranti:** Membolehkan pelajar menyambung latihan matematik di telefon pintar, tablet, atau komputer sekolah tanpa kehilangan tahap kemajuan.
@@ -43,6 +44,7 @@ We collect only the minimum data required for educational functionality:
 ### 3. How We Use Your Data
 - **Cross-Device Sync:** Allows students to switch between school computers and home devices without losing their learning progress.
 - **AI Tutoring:** Math questions are transmitted via secure HTTPS to a hosted OpenAI-compatible language model provider solely to generate real-time math hints. Chat queries are never sold or used for commercial advertising.
+- **Feedback:** Problem descriptions and optional attachments submitted through the feedback form are emailed to the project team at `sulamaiventure@gmail.com`.
 
 ### 4. Data Security and Hosting
 - Student profiles and progress are stored in a managed PostgreSQL database on **Supabase (Southeast Asia / Singapore region)**.

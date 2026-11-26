@@ -252,6 +252,28 @@ input, textarea, select { font-family: inherit; color: inherit; }
 .setting:last-child { border: none; }
 .setting b { display: block; font-weight: 800; } .setting small { color: var(--muted); font-weight: 600; }
 .setting input[type=text] { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); font-weight: 700; outline: none; }
+.feedback-card { max-width: 720px; margin-top: 20px; }
+.feedback-intro { color: var(--muted); font-weight: 600; margin: -6px 0 18px; }
+.feedback-card form { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+.feedback-card label { font-weight: 800; margin-top: 7px; }
+.feedback-card .required-mark { color: var(--danger); }
+.feedback-card input, .feedback-card textarea, .feedback-card select {
+  width: 100%; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface-2); outline: none;
+}
+.feedback-card textarea { resize: vertical; min-height: 120px; }
+.feedback-card input:focus, .feedback-card textarea:focus, .feedback-card select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(91, 91, 214, .18); }
+.feedback-card input[type=file] { padding: 9px; }
+.feedback-card input[type=file]::file-selector-button {
+  margin-right: 12px; padding: 8px 12px; border: 0; border-radius: 10px;
+  background: var(--grad); color: #fff; font-family: var(--font); font-weight: 800;
+  cursor: pointer; box-shadow: 0 4px 12px rgba(91, 91, 214, .22);
+}
+.feedback-card input[type=file]::file-selector-button:hover { filter: brightness(1.07); }
+.feedback-hint, .feedback-status { color: var(--muted); font-weight: 600; }
+.feedback-status:empty { display: none; }
+.feedback-status[data-state="error"] { color: var(--danger); }
+.feedback-status[data-state="success"] { color: var(--success); }
 .account-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .account-actions button[hidden] { display: none; }
 
@@ -313,6 +335,19 @@ body.auth-pending::after {
 #auth-form input { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; outline: none; background: var(--surface-2); }
 #auth-form input:focus, .setting input[type=text]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(91, 91, 214, .18); }
 #auth-form input:disabled { opacity: .6; }
+.password-field { position: relative; width: 100%; }
+#auth-form .password-field input { padding-right: 48px; }
+.password-toggle {
+  position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+  width: 34px; height: 34px; display: grid; place-items: center;
+  border-radius: 9px; color: var(--muted);
+}
+.password-toggle:hover { color: var(--primary); background: var(--surface); }
+.password-toggle:disabled { opacity: .6; cursor: not-allowed; }
+.password-toggle svg { width: 19px; height: 19px; }
+.password-toggle svg[hidden] { display: none; }
+.auth-confirm-group { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.auth-confirm-group[hidden] { display: none; }
 .auth-privacy[hidden] { display: none; }
 .auth-privacy { color: var(--muted); font-size: .78rem; line-height: 1.5; margin: 6px 0; }
 .auth-message { min-height: 1.3em; color: var(--danger); font-size: .88rem; font-weight: 800; }

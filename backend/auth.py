@@ -16,6 +16,7 @@ from backend.config import settings
 class User:
     id: str
     email: str | None = None
+    username: str | None = None
 
 
 _jwks_client = (jwt.PyJWKClient(settings.supabase_jwks_url, timeout=10)
@@ -52,7 +53,11 @@ def _verify_token(token: str) -> User:
         email = payload.get("email")
         if email is not None and not isinstance(email, str):
             raise jwt.InvalidTokenError()
-        return User(id=user_id, email=email)
+        metadata = payload.get("user_metadata")
+        username = metadata.get("username") if isinstance(metadata, dict) else None
+        if username is not None and not isinstance(username, str):
+            raise jwt.InvalidTokenError()
+        return User(id=user_id, email=email, username=username)
     except (jwt.PyJWTError, ValueError, TypeError, AttributeError, OSError):
         raise HTTPException(401, _AUTH_ERROR) from None
 
@@ -92,12 +97,18 @@ async def rate_limited_user(request: Request) -> User:
         # Forwarded headers are deliberately not trusted here.
         key = "ip:" + (request.client.host if request.client else "unknown")
     else:
-        parts = header.split() if header else []
-        if len(parts) != 2 or parts[0].lower() != "bearer":
-            raise HTTPException(401, _AUTH_ERROR)
-        # PyJWKClient performs synchronous network I/O on a cache miss.
-        user = await run_in_threadpool(_verify_token, parts[1])
+        user = await authenticated_user(request)
         key = "user:" + user.id
     _rate_limit(key)
     return user
+
+
+async def authenticated_user(request: Request) -> User:
+    """Require and validate a signed-in user's bearer token."""
+    header = request.headers.get("authorization")
+    parts = header.split() if header else []
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(401, _AUTH_ERROR)
+    # PyJWKClient performs synchronous network I/O on a cache miss.
+    return await run_in_threadpool(_verify_token, parts[1])
 

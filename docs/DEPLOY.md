@@ -42,6 +42,12 @@ Under the **Environment Variables** section on Render, add:
 | `SUPABASE_ANON_KEY` | `sb_publishable__...` | Public client anon key |
 | `SUPABASE_JWKS_URL` | `https://npwqlocosrmafjwyyqbs.supabase.co/auth/v1/.well-known/jwks.json` | Public JWT signature verification keys |
 | `SUPABASE_JWT_SECRET`| *(legacy secret if applicable)* | Fallback HS256 secret |
+| `SMTP_HOST` | `smtp.gmail.com` | SMTP server used to deliver feedback |
+| `SMTP_PORT` | `587` | SMTP port (587 for STARTTLS, 465 with SSL) |
+| `SMTP_USERNAME` | *(sender account)* | SMTP login username |
+| `SMTP_PASSWORD` | *(SMTP/app password)* | SMTP login password; store as a secret |
+| `SMTP_FROM_EMAIL` | *(optional; defaults to SMTP_USERNAME)* | Sender address accepted by the SMTP provider |
+| `SMTP_USE_SSL` | `false` | Set to `true` for implicit SSL on port 465 |
 | `AUTH_REQUIRED` | `true` | Enforces mandatory student authentication |
 | `RATE_LIMIT_PER_MIN`| `8` | Protects AI quota per student per minute |
 | `RATE_LIMIT_PER_DAY`| `120` | Max questions per student per day |
@@ -104,3 +110,6 @@ Run this 30 minutes before your demo or presentation:
 - [ ] Log in with a test student account and ask 1 question in Tutor Chat.
 - [ ] Complete 1 practice question in Latihan and verify XP changes.
 - [ ] Check provider quota on your LLM dashboard to ensure sufficient free requests remain.
+
+### Feedback email delivery
+Feedback is delivered to `sulamaiventure@gmail.com` by the backend. Configure the SMTP variables above before enabling the feedback form in production. For Gmail, use an app password (not the account's normal password) and ensure the sender account is permitted to send mail through SMTP. Optional attachments are limited to 5 MB.

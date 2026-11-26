@@ -31,6 +31,10 @@ def client(monkeypatch):
     async def user_endpoint(user: auth.User = Depends(auth.rate_limited_user)):
         return {"id": user.id, "email": user.email}
 
+    @app.get("/authenticated")
+    async def authenticated_endpoint(user: auth.User = Depends(auth.authenticated_user)):
+        return {"id": user.id, "email": user.email, "username": user.username}
+
     with TestClient(app) as test_client:
         yield test_client
 
@@ -67,6 +71,36 @@ def test_valid_token(client):
     response = call(client, token())
     assert response.status_code == 200
     assert response.json() == {"id": USER_ID, "email": "student@example.test"}
+
+
+def test_valid_token_includes_username_metadata(client):
+    response = call(client, token(user_metadata={"username": "student"}))
+    assert response.status_code == 200
+    assert response.json() == {"id": USER_ID, "email": "student@example.test"}
+
+
+def test_authenticated_user_rejects_missing_token(client):
+    response = client.get("/authenticated")
+    assert response.status_code == 401
+
+
+def test_authenticated_user_accepts_valid_token(client):
+    response = client.get(
+        "/authenticated", headers={"Authorization": "Bearer " + token()}
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": USER_ID, "email": "student@example.test", "username": None
+    }
+
+
+def test_authenticated_user_extracts_username(client):
+    response = client.get(
+        "/authenticated",
+        headers={"Authorization": "Bearer " + token(user_metadata={"username": "student"})},
+    )
+    assert response.status_code == 200
+    assert response.json()["username"] == "student"
 
 
 @pytest.mark.parametrize("claims", [

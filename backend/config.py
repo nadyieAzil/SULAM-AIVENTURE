@@ -74,6 +74,16 @@ class Settings:
         default_factory=lambda: _int_env("RATE_LIMIT_PER_DAY", 120)
     )
 
+    # Feedback email (SMTP)
+    smtp_host: str = field(default_factory=lambda: os.getenv("SMTP_HOST", ""))
+    smtp_port: int = field(default_factory=lambda: _int_env("SMTP_PORT", 587))
+    smtp_username: str = field(default_factory=lambda: os.getenv("SMTP_USERNAME", ""))
+    smtp_password: str = field(default_factory=lambda: os.getenv("SMTP_PASSWORD", ""))
+    smtp_from_email: str = field(default_factory=lambda: os.getenv("SMTP_FROM_EMAIL", ""))
+    smtp_use_ssl: bool = field(
+        default_factory=lambda: _bool_env("SMTP_USE_SSL", False)
+    )
+
     # Server & CORS (Contract A)
     allowed_origins: str = field(
         default_factory=lambda: os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:8000")
